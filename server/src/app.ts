@@ -35,8 +35,9 @@ const users: userType = {}
 const broadcast = () => {
     Object.keys(connections).forEach(uuid => {
         const connection = connections[uuid]
+
+        // console.log("sending", JSON.stringify(users))
         connection.send(JSON.stringify(users))
-        console.log("sending", JSON.stringify(users))
     })
 }
 
@@ -53,6 +54,7 @@ const handleMessage = (message_in_bytes: string, uuid: string) => {
     const user = users[uuid]
     user.cursor = message
 
+    // console.log("see message received", message)
     broadcast()
 }
 
