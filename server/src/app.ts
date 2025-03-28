@@ -14,11 +14,56 @@ const server = http.createServer(app)
 // Initialize WebSocket server
 const wsServer = new WebSocketServer({ server })
 
-
 // connections will hold all the connections
 const connections: { [uuid: string]: WebSocket } = {}
+
 // users will hold all the users and the current state of their cursor
-const users: { [uuid: string]: {username: string, cursor: {x: number, y: number}} } = {}
+type userType = {
+    [uuid: string]: {
+        username: string,
+        cursor: {
+            x: number,
+            y: number
+        }
+    }
+}
+
+const users: userType = {}
+
+
+// sends a message to all connected clients
+const broadcast = () => {
+    Object.keys(connections).forEach(uuid => {
+        const connection = connections[uuid]
+        connection.send(JSON.stringify(users))
+        console.log("sending", JSON.stringify(users))
+    })
+}
+
+
+// Handle WebSocket messages for each connection
+const handleMessage = (message_in_bytes: string, uuid: string) => {
+    // whenever data is sent from the client, it comes in bytes. even in a normal http request
+    // remember, in a normal express app, we usually use a middleware to convert the data to JSON
+    // i.e app.use(express.json()); - this will convert the data to JSON
+    // because of the middleware, we do not need to do: JSON.parse(message_in_bytes.toString()) for every request we receive
+
+    // Parse the message into a JSON object
+    const message: userType[typeof uuid]['cursor'] = JSON.parse(message_in_bytes.toString())
+    const user = users[uuid]
+    user.cursor = message
+
+    broadcast()
+}
+
+// Handle WebSocket disconnections for each connection
+const handleClose = (uuid: string) => {
+    console.log(`connection closed for ${users[uuid].username}`)
+    delete connections[uuid]
+    delete users[uuid]
+
+    broadcast()
+}
 
 
 // Handle WebSocket connections
@@ -36,7 +81,6 @@ wsServer.on("connection", (connection, request: http.IncomingMessage) => {
         return
     }
 
-
     //@ts-ignore
     connections[uuid] = connection
 
@@ -48,13 +92,10 @@ wsServer.on("connection", (connection, request: http.IncomingMessage) => {
         }
     }
 
-    connection.on("message", (message) => handleMessage(message, uuid))
+    connection.on("message", (message) => handleMessage(message as unknown as string, uuid))
 
     connection.on("close", () => {
         handleClose(uuid)
-        console.log("connection closed")
-        delete connections[uuid]
-        delete users[uuid]
     })
     console.log(username, uuid)
 })
