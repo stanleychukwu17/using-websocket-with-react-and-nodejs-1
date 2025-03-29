@@ -11,6 +11,7 @@ export default function App1() {
                 <h2>Hello {username}</h2>
             </div>
             <div className="">
+                {/* if there is a username, show the Home component, otherwise show the Login component */}
                 {username && <Home username={username} />}
                 {!username && <Login onSubmit={setUsername} />}
             </div>
